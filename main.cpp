@@ -45,7 +45,7 @@ int getValidChoice();
 void waitForEnter();
 
 // --------------------------
-// Memory Management Function
+// Memory Management Function 
 // --------------------------
 void allocateGrids() {
     // Clean up existing grids first
@@ -69,8 +69,8 @@ void allocateGrids() {
     }
     
     // Calculate new grid dimensions (total columns & rows)
-    grid_width = gridX_max - gridX_min + 1;
-    grid_height = gridY_max - gridY_min + 1;
+    grid_width = gridX_max - gridX_min + 1; 
+    grid_height = gridY_max - gridY_min + 1;  
     
     // Allocate city grid (store city IDs)
     cityGrid = new int*[grid_height];
@@ -159,12 +159,12 @@ void readConfigFile() {
     string line;
     cout << "\nReading config file..." << endl;
    
-   // Read file line by line
+   // Read file line by line 
     while (getline(file, line)) {
         line = trim(line);
         if (line.empty()) continue;
         
-        cout << line << endl;
+        cout << line << endl; 
         
         // Parse Grid X Range
         if (line.find("GridX_IdxRange") != string::npos) {
@@ -204,13 +204,13 @@ void readConfigFile() {
         }
         // Identify Data Files
         else if (line.find("CityLocation.txt") != string::npos) {
-            cityFileName = trim(line);
+            cityFileName = trim(line);  
         }
         else if (line.find("CloudCover.txt") != string::npos) {
-            cloudFileName = trim(line);
+            cloudFileName = trim(line);  
         }
         else if (line.find("Pressure.txt") != string::npos) {
-            pressureFileName = trim(line);
+            pressureFileName = trim(line); 
         }
     }
     file.close();
@@ -223,10 +223,10 @@ void readConfigFile() {
     cout << "\nConfiguration loaded successfully!" << endl;
     cout << "Grid dimensions: [" << gridX_min << "-" << gridX_max << "] x [" << gridY_min << "-" << gridY_max << "]" << endl;
     if (!cityFileName.empty()) cout << "City file: " << cityFileName << endl;
-    if (!cloudFileName.empty()) cout << "Cloud file: " << cloudFileName << endl;
+    if (!cloudFileName.empty()) cout << "Cloud file: " << cloudFileName << endl;  
     if (!pressureFileName.empty()) cout << "Pressure file: " << pressureFileName << endl;
     
-    waitForEnter();
+    waitForEnter(); 
 }
 
 // --------------------------
@@ -321,9 +321,9 @@ bool readCloudData() {
             size_t start = line.find('[');
             size_t comma = line.find(',');
             size_t end = line.find(']');
-            size_t dash = line.find('-', end);
+            size_t dash = line.find('-', end); 
             
-            if (start == string::npos || comma == string::npos ||
+            if (start == string::npos || comma == string::npos || 
                 end == string::npos || dash == string::npos) {
                 continue; // Skip malformed lines
             }
@@ -374,7 +374,7 @@ bool readPressureData() {
             size_t end = line.find(']');
             size_t dash = line.find('-', end);
             
-            if (start == string::npos || comma == string::npos ||
+            if (start == string::npos || comma == string::npos || 
                 end == string::npos || dash == string::npos) {
                 continue; // Skip malformed lines
             }
@@ -419,7 +419,7 @@ void displayCityMap() {
     
     // Print top border
     cout << "     ";                                      // Space for y-axis labels
-    for (int x = gridX_min - 1; x <= gridX_max; x++) {
+    for (int x = gridX_min - 1; x <= gridX_max; x++) {   
         cout << "# ";                                     // Each '#' with space
     }
     cout << "#" << endl;                                  // Final '#' for right border
@@ -728,6 +728,13 @@ void displayWeatherReport() {
         return;
     }
     
+    // checking data integrity
+    if (!cityGrid || !cloudData || !pressureData) {
+        cout << "Error: Grid data not allocated!" << endl;
+        waitForEnter();
+        return;
+    }
+    
     // Load all data
     if (!readCityData() || !readCloudData() || !readPressureData()) {
         waitForEnter();
@@ -783,10 +790,10 @@ void displayWeatherReport() {
                 }
                 if (isCityPos) continue;
                 
-                // Check if already added to perimeter (avoid duplicates)
+                // Check if already added to perimeter (to avoid duplicates)
                 bool alreadyAdded = false;
-                for (const auto& perimPos : perimeterPositions) {
-                    if (perimPos.first == nx && perimPos.second == ny) {
+                for (size_t k = 0; k < perimeterPositions.size(); k++) {
+                    if (perimeterPositions[k].first == nx && perimeterPositions[k].second == ny) {
                         alreadyAdded = true;
                         break;
                     }
@@ -797,44 +804,67 @@ void displayWeatherReport() {
             }
         }
         
-        // Calculate ACC (Average Cloud Cover)
+        // Calculate ACC (Average Cloud Cover) 
         double totalCloud = 0;
-        int totalAreas = cityPositions.size() + perimeterPositions.size();
+        int validCloudAreas = 0;
         
         // Sum cloud values from city areas
         for (const auto& pos : cityPositions) {
             int gridX = pos.first - gridX_min;
             int gridY = pos.second - gridY_min;
-            totalCloud += cloudData[gridY][gridX];
+            
+            // checking boundaries before accessing
+            if (gridX >= 0 && gridX < grid_width && gridY >= 0 && gridY < grid_height) {
+                totalCloud += cloudData[gridY][gridX];
+                validCloudAreas++;
+            }
         }
         
         // Sum cloud values from perimeter areas
         for (const auto& pos : perimeterPositions) {
             int gridX = pos.first - gridX_min;
             int gridY = pos.second - gridY_min;
-            totalCloud += cloudData[gridY][gridX];
+            
+            // checking boundaries before accessing
+            if (gridX >= 0 && gridX < grid_width && gridY >= 0 && gridY < grid_height) {
+                totalCloud += cloudData[gridY][gridX];
+                validCloudAreas++;
+            }
         }
         
-        double ACC = totalCloud / totalAreas;
+        // checking div by 0
+        double ACC = (validCloudAreas > 0) ? totalCloud / validCloudAreas : 0;
         
-        // Calculate AP (Average Pressure)
+        // Calculate AP (Average Pressure) with 
         double totalPressure = 0;
+        int validPressureAreas = 0;
         
         // Sum pressure values from city areas
         for (const auto& pos : cityPositions) {
             int gridX = pos.first - gridX_min;
             int gridY = pos.second - gridY_min;
-            totalPressure += pressureData[gridY][gridX];
+            
+            // checking boundaries before accessing
+            if (gridX >= 0 && gridX < grid_width && gridY >= 0 && gridY < grid_height) {
+                totalPressure += pressureData[gridY][gridX];
+                validPressureAreas++;
+            }
         }
         
         // Sum pressure values from perimeter areas
         for (const auto& pos : perimeterPositions) {
             int gridX = pos.first - gridX_min;
             int gridY = pos.second - gridY_min;
-            totalPressure += pressureData[gridY][gridX];
+            
+            // checking boundaries before accessing
+            if (gridX >= 0 && gridX < grid_width && gridY >= 0 && gridY < grid_height) {
+                totalPressure += pressureData[gridY][gridX];
+                validPressureAreas++;
+            }
         }
         
-        double AP = totalPressure / totalAreas;
+        // checking div by 0
+        double AP = (validPressureAreas > 0) ? totalPressure / validPressureAreas : 0;
         
         // Determine LMH symbols for ACC and AP
         char accSymbol = (ACC < 35) ? 'L' : (ACC < 65) ? 'M' : 'H';
@@ -878,49 +908,48 @@ void displayWeatherReport() {
         cout << "Ave. Pressure (AP) : " << fixed << setprecision(2) << AP << " (" << apSymbol << ")" << endl;
         cout << "Probability of Rain (%) : " << fixed << setprecision(2) << (double)rainProbability << endl;
         
-        // ASCII graphics based on probability system
-        // Pattern: Base tildes + separator + extra backslashes
+        // ASCII graphics from second code - but with safety
         if (rainProbability == 90) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator (5 tildes)
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator (5 tildes)
             cout << "\\\\\\\\\\" << endl;          // 50% extra (5 backslashes)
         }
         else if (rainProbability == 80) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator
             cout << "\\\\\\\\" << endl;            // 40% extra (4 backslashes)
         }
         else if (rainProbability == 70) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator
             cout << "\\\\\\" << endl;              // 30% extra (3 backslashes)
         }
         else if (rainProbability == 60) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator
             cout << "\\\\" << endl;                // 20% extra (2 backslashes)
         }
         else if (rainProbability == 50) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator
             cout << "\\" << endl;                  // 10% extra (1 backslash)
         }
         else if (rainProbability == 40) {
-            cout << "~~~~" << endl;                 // 40% base
-            cout << "~~~~~" << endl;                // Separator
+            cout << "" << endl;                 // 40% base
+            cout << "~" << endl;                // Separator
             // No extra (40% total)
         }
         else if (rainProbability == 30) {
-            cout << "~~~" << endl;                  // 30% total (3 tildes)
-            cout << "~~~~" << endl;                 // Separator (base + 1)
+            cout << "~" << endl;                  // 30% total (3 tildes)
+            cout << "" << endl;                 // Separator (base + 1)
         }
         else if (rainProbability == 20) {
-            cout << "~~" << endl;                   // 20% total (2 tildes)
-            cout << "~~~" << endl;                  // Separator (base + 1)
+            cout << "" << endl;                   // 20% total (2 tildes)
+            cout << "~" << endl;                  // Separator (base + 1)
         }
         else if (rainProbability == 10) {
             cout << "~" << endl;                    // 10% total (1 tilde)
-            cout << "~~" << endl;                   // Separator (base + 1)
+            cout << "" << endl;                   // Separator (base + 1)
         }
     }
     
@@ -952,8 +981,8 @@ void showMenu() {
 // -----------------------
 void waitForEnter() {
     cout << "\nPress <enter> to go back to main menu...";
-    string dummy;
-    getline(cin, dummy);
+    string dummy;                                        
+    getline(cin, dummy);                            
 }
 
 // -------------------------
